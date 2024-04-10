@@ -108,15 +108,15 @@ class ProductSearch(generics.GenericAPIView):
         keywords = request.GET.get("keywords")
 
         db_helper = DB_helper()
-        products = self.convert_list_to_dict(db_helper.function_get_all("product_get_product_by_search('" + keywords + "')"))
+        products = self.convert_tuple_to_dict(db_helper.store_procedure("product_get_product_by_search('" + keywords + "')"))
  
         serializer = ProductSearchSerializer(products, many=True)
 
         return Response(serializer.data)
     
-    def convert_list_to_dict(self, list_data):
+    def convert_tuple_to_dict(self, list_data):
         temp_dict = {}
-        temp_list = []
+        temp_tuple = []
         for item in list_data:
             temp_dict["id"] = item[0]
             temp_dict["name"] = item[1]
@@ -127,9 +127,9 @@ class ProductSearch(generics.GenericAPIView):
             temp_dict["modified_date"] = item[6]
             temp_dict["star_review"] = item[7]
 
-            temp_list.append(temp_dict)
+            temp_tuple.append(temp_dict)
 
-        return temp_list
+        return temp_tuple
 
 class ProductDetail(generics.GenericAPIView):
     queryset = ProductModel.objects.all()
@@ -225,7 +225,7 @@ class Cart(generics.GenericAPIView):
         
         if user:
             db_helper = DB_helper()
-            carts = self.convert_list_to_dict(db_helper.function_get_all("cart_get_all_by_user_id("+str(user_id)+")"))
+            carts = self.convert_tuple_to_dict(db_helper.store_procedure("cart_get_all_by_user_id("+str(user_id)+")"))
 
             serializer = CartDetailSerializer(instance=carts, many=True)
             
@@ -258,18 +258,18 @@ class Cart(generics.GenericAPIView):
 
         return Response(status=status.HTTP_200_OK)
     
-    def convert_list_to_dict(self, list_data):
+    def convert_tuple_to_dict(self, tuple_data):
         temp_dict = {}
-        temp_list = []
-        for item in list_data:
+        temp_tuple = []
+        for item in tuple_data:
             temp_dict["id"] = item[0]
             temp_dict["name"] = item[1]
             temp_dict["image_url"] = item[2]
             temp_dict["price"] = item[3]
             temp_dict["total_order"] = item[4]
-            temp_list.append(temp_dict)
+            temp_tuple.append(temp_dict)
 
-        return temp_list
+        return temp_tuple
 
 #TODO:
     #find a new structure to place db helper
@@ -279,6 +279,13 @@ class DB_helper():
     def function_get_all(self, function_name):
         with connection.cursor() as cursor:
             cursor.execute("SELECT * FROM "+ function_name +";")
+            row = cursor.fetchall()
+
+        return row
+    
+    def store_procedure(self, sp_name):
+        with connection.cursor() as cursor:
+            cursor.execute("CALL "+ sp_name +";")
             row = cursor.fetchall()
 
         return row

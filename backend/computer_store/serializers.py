@@ -19,14 +19,14 @@ class CartSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class CartDetailSerializer(serializers.Serializer):
-    id = serializers.IntegerField()
+    id = serializers.StringRelatedField()
     name = serializers.StringRelatedField()
     image_url = serializers.StringRelatedField()
     price = serializers.IntegerField()
     total_order = serializers.IntegerField()
 
 class ProductSearchSerializer(serializers.Serializer):
-    id = serializers.IntegerField()
+    id = serializers.StringRelatedField()
     name = serializers.StringRelatedField()
     image_url = serializers.StringRelatedField()
     price = serializers.IntegerField()
