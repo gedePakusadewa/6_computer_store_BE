@@ -21,17 +21,25 @@ class CartSerializer(serializers.ModelSerializer):
 class CartDetailSerializer(serializers.Serializer):
     id = serializers.StringRelatedField()
     name = serializers.StringRelatedField()
-    image_url = serializers.StringRelatedField()
+    image_url = serializers.SerializerMethodField()
     price = serializers.IntegerField()
     total_order = serializers.IntegerField()
+
+    def get_image_url(self, obj):
+        storage_location = '/media'
+        return f'{storage_location}/{obj["image_url"]}'
 
 class ProductSearchSerializer(serializers.Serializer):
     id = serializers.StringRelatedField()
     name = serializers.StringRelatedField()
-    image_url = serializers.StringRelatedField()
+    image_url = serializers.SerializerMethodField()
     price = serializers.IntegerField()
     created_by = serializers.StringRelatedField()
     created_date = serializers.DateField()
     modified_date = serializers.DateField()
     star_review = serializers.IntegerField()
+
+    def get_image_url(self, obj):
+        storage_location = '/media'
+        return f'{storage_location}/{obj["image_url"]}'
 

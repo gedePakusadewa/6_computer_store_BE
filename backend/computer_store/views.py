@@ -1,6 +1,6 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .serializers import UserSerializer, ProductSerializer, CartSerializer,CartDetailSerializer, ProductSearchSerializer
+from .serializers import UserSerializer, ProductSerializer, CartSerializer, CartDetailSerializer, ProductSearchSerializer
 from rest_framework import status, generics
 from django.contrib.auth.models import User
 from rest_framework.authtoken.models import Token
@@ -109,7 +109,7 @@ class ProductSearch(generics.GenericAPIView):
 
         db_helper = DB_helper()
         products = self.convert_tuple_to_dict(db_helper.store_procedure("product_get_product_by_search('" + keywords + "')"))
- 
+    
         serializer = ProductSearchSerializer(products, many=True)
 
         return Response(serializer.data)
@@ -128,6 +128,7 @@ class ProductSearch(generics.GenericAPIView):
             temp_dict["star_review"] = item[7]
 
             temp_tuple.append(temp_dict)
+            temp_dict = {}
 
         return temp_tuple
 
@@ -226,7 +227,7 @@ class Cart(generics.GenericAPIView):
         if user:
             db_helper = DB_helper()
             carts = self.convert_tuple_to_dict(db_helper.store_procedure("cart_get_all_by_user_id("+str(user_id)+")"))
-
+            
             serializer = CartDetailSerializer(instance=carts, many=True)
             
             return Response({"cart_products":serializer.data}) 
@@ -267,7 +268,9 @@ class Cart(generics.GenericAPIView):
             temp_dict["image_url"] = item[2]
             temp_dict["price"] = item[3]
             temp_dict["total_order"] = item[4]
+
             temp_tuple.append(temp_dict)
+            temp_dict = {}
 
         return temp_tuple
 
