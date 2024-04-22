@@ -23,19 +23,30 @@ from django.db import connection
 class LogIn(generics.GenericAPIView):
     serializer_class = UserSerializer
     queryset = User.objects.all()
+    demo_username = "demo_user1"
     # authentication_classes = [TokenAuthentication]
     # permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        user = get_object_or_404(User, username=request.data['username'])
+        try:
+            is_demo = request.data['isDemo']
+            if is_demo:
+                user = get_object_or_404(User, username=self.demo_username)
+            else:
+                user = get_object_or_404(User, username=request.data['username'])
 
-        if not user.check_password(request.data['password']):
-            return Response({"detail":"Not Found"}, status=status.HTTP_404_NOT_FOUND)
+            if not is_demo and not user.check_password(request.data['password']):
+                return Response({"detail":"Not Found"}, status=status.HTTP_404_NOT_FOUND)
 
-        token, created = Token.objects.get_or_create(user=user)
-        serializer = UserSerializer(instance=user)
+            token, created = Token.objects.get_or_create(user=user)
+            serializer = UserSerializer(instance=user)
 
-        return Response({"token":token.key, "user":serializer.data})
+            return Response({"token":token.key, "user":serializer.data})
+        except:
+            return Response(
+                {"message":"Error when login"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 class SignUp(generics.GenericAPIView):
     serializer_class = UserSerializer
