@@ -12,7 +12,10 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RunSQL(
             '''
-                INSERT INTO `enam_computer`.`auth_user`
+                DELETE FROM `auth_user`
+                WHERE id = 9999
+
+                INSERT INTO `auth_user`
                 (`id`,
                 `password`,
                 `last_login`,

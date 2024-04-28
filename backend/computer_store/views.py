@@ -29,7 +29,8 @@ class LogIn(generics.GenericAPIView):
 
     def post(self, request):
         try:
-            is_demo = request.data['isDemo']
+            is_demo = request.data['isDemo']               
+                
             if is_demo:
                 user = get_object_or_404(User, username=self.demo_username)
             else:
@@ -42,9 +43,10 @@ class LogIn(generics.GenericAPIView):
             serializer = UserSerializer(instance=user)
 
             return Response({"token":token.key, "user":serializer.data})
-        except:
+        
+        except Exception:
             return Response(
-                {"message":"Error when login"},
+                {"message":"Error in Log In"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -169,9 +171,7 @@ class Profile(generics.GenericAPIView):
 
         if not user:
             return Response(
-                {
-                    "message":"User not found"
-                },
+                {"message":"User not found"},
                 status=status.HTTP_404_NOT_FOUND
             )
         
@@ -179,6 +179,45 @@ class Profile(generics.GenericAPIView):
 
         return Response({"user":serializer.data})
     
+    def post(self, request):
+        user_id = Token.objects.get(key=request.auth.key).user_id
+        user = User.objects.get(pk=user_id)
+
+        if user is not None:
+            serializer_user = self.serializer_class(user, data=request.data, partial=True)
+
+            if serializer_user.is_valid():
+                serializer_user.save()
+
+                return Response(status=status.HTTP_200_OK)
+            
+        return Response(serializer_user.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request):
+        user_id = Token.objects.get(key=request.auth.key).user_id
+        user = User.objects.get(pk=user_id)
+
+        if not user:
+            return Response(
+                {"message":"User not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        try:
+            user.delete()
+
+            
+
+            return Response(
+                {"message":"User deleted"},
+                status=status.HTTP_200_OK
+            )
+        except Exception:
+            return Response(
+                {"message":"Error when delete user"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 # TODO
 # find way so it can pass data through body data for delete request not in url param
 class Cart(generics.GenericAPIView):
