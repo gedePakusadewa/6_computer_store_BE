@@ -13,7 +13,7 @@ class Migration(migrations.Migration):
         migrations.RunSQL(
             '''
                 DELETE FROM `auth_user`
-                WHERE id = 9999
+                WHERE id = 9999;
 
                 INSERT INTO `auth_user`
                 (`id`,
