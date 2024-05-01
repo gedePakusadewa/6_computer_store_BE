@@ -15,17 +15,16 @@ from django.conf import settings
 import requests
 from django.http import JsonResponse
 
-# from rest_framework.parsers import MultiPartParser, FormParser
 from .models import ProductModel, CartModel
 
 from django.db import connection
 
-from computer_store.constants.general import UserDemoConstants, UserConstants
+from computer_store.constants.general import UserDemoConstants, UserConstants, GeneralConstants, ProfileConstants, LogInConstants, ProductConstants
 
 class LogIn(generics.GenericAPIView):
     serializer_class = UserSerializer
     queryset = User.objects.all()
-    demo_username =  getattr(settings, "USERNAME_DEMO", None)
+    demo_username =  getattr(settings, UserDemoConstants.USERNAME_DEMO, None)
     # authentication_classes = [TokenAuthentication]
     # permission_classes = [IsAuthenticated]
 
@@ -39,16 +38,22 @@ class LogIn(generics.GenericAPIView):
                 user = get_object_or_404(User, username=request.data['username'])
 
             if not is_demo and not user.check_password(request.data['password']):
-                return Response({"detail":"Not Found"}, status=status.HTTP_404_NOT_FOUND)
+                return Response(
+                    { GeneralConstants.MESSAGE:UserConstants.NOT_FOUND },
+                    status=status.HTTP_404_NOT_FOUND
+                )
 
             token, created = Token.objects.get_or_create(user=user)
             serializer = UserSerializer(instance=user)
 
-            return Response({"token":token.key, "user":serializer.data})
+            return Response({
+                GeneralConstants.TOKEN:token.key, 
+                UserConstants.USER:serializer.data
+            })
         
-        except Exception:
+        except Exception as e:
             return Response(
-                {"message":"Error in Log In"},
+                { GeneralConstants.ERROR:LogInConstants.ERROR_IN_LOGIN },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -66,10 +71,16 @@ class SignUp(generics.GenericAPIView):
             user.save()
             token = Token.objects.create(user=user)
 
-            return Response({"token":token.key, "user":serializer.data})
+            return Response({
+                GeneralConstants.TOKEN:token.key, 
+                UserConstants.USER:serializer.data
+            })
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+# TODO if user account got deleted through post man and then user log out using
+# frontend, server will send unautorised account
+# find a way to handle this
 class LogOut(generics.GenericAPIView):
     serializer_class = UserSerializer
     queryset = User.objects.all()
@@ -102,7 +113,7 @@ class ProductImage(generics.GenericAPIView):
         if serializer.is_valid():
             serializer.save()
 
-            return Response({"image_url":serializer.data})
+            return Response({ GeneralConstants.IMAGE_URL:serializer.data })
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
@@ -159,14 +170,14 @@ class ProductDetail(generics.GenericAPIView):
         product = get_object_or_404(ProductModel, pk=request.GET.get('pk'))
         serializer = self.serializer_class(instance=product)
 
-        return Response({"product_detail":serializer.data}) 
+        return Response({ ProductConstants.PRODUCT_DETAIL:serializer.data }) 
 
 class Profile(generics.GenericAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
-    username_demo = getattr(settings, "USERNAME_DEMO", None)
+    username_demo = getattr(settings, UserDemoConstants.USERNAME_DEMO, None)
 
     def get(self, request):
         try:
@@ -175,17 +186,17 @@ class Profile(generics.GenericAPIView):
 
             if not user:
                 return Response(
-                    {"message": UserConstants.NOT_FOUND},
+                    { GeneralConstants.MESSAGE: UserConstants.NOT_FOUND },
                     status=status.HTTP_404_NOT_FOUND
                 )
             
             serializer = self.serializer_class(instance=user)
 
-            return Response({"user":serializer.data})
+            return Response({ GeneralConstants.USER:serializer.data })
         
         except Exception as e:
             return Response(
-                { "Error": "Error In Profile" },
+                { GeneralConstants.ERROR: ProfileConstants.ERROR_IN_PROFILE },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
             
@@ -196,13 +207,13 @@ class Profile(generics.GenericAPIView):
 
             if not user:
                 return Response(
-                    {"message": UserConstants.NOT_FOUND},
+                    { GeneralConstants.MESSAGE: UserConstants.NOT_FOUND },
                     status=status.HTTP_404_NOT_FOUND
                 )
 
             if user.username.upper() == self.username_demo.upper():
                 return Response(
-                    { "Error":UserDemoConstants.CAN_NOT_MODIFY },
+                    { GeneralConstants.ERROR:UserDemoConstants.CAN_NOT_MODIFY },
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
@@ -221,7 +232,7 @@ class Profile(generics.GenericAPIView):
         
         except Exception as e:
             return Response(
-                { "Error":"Error In Update Profile" },
+                { GeneralConstants.ERROR:ProfileConstants.ERROR_IN_UPDATE_PROFILE },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )        
     
@@ -232,26 +243,31 @@ class Profile(generics.GenericAPIView):
 
             if not user:
                 return Response(
-                    {"message": UserConstants.NOT_FOUND},
+                    { GeneralConstants.MESSAGE: UserConstants.NOT_FOUND },
                     status=status.HTTP_404_NOT_FOUND
                 )
             
             if user.username.upper() == self.username_demo.upper():
                 return Response(
-                    { "Error":UserDemoConstants.CAN_NOT_MODIFY },
+                    { GeneralConstants.MESSAGE:UserDemoConstants.CAN_NOT_MODIFY },
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            user.delete()           
+            # TODO find a way to delete user using SP instead using ORM
+            # track sql query using
+            # print(connection.queries)       
+            user.delete()
+            db_helper = DB_helper()
+            carts = db_helper.store_procedure("profile_delete_user_by_user_id("+str(user_id)+")")
 
             return Response(
-                {"message":"User deleted"},
+                { GeneralConstants.MESSAGE:UserConstants.USER_DELETED },
                 status=status.HTTP_200_OK
             )
         
         except Exception as e:
             return Response(
-                {"message":"Error when delete user"},
+                { GeneralConstants.ERROR:UserConstants.ERROR_WHEN_DELETE_USER },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -260,7 +276,7 @@ class UserDemo(generics.GenericAPIView):
     queryset = User.objects.all()
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
-    demo_username = getattr(settings, "USERNAME_DEMO", None)
+    demo_username = getattr(settings, UserDemoConstants.USERNAME_DEMO, None)
 
     def get(self, request):
         try:
@@ -269,7 +285,7 @@ class UserDemo(generics.GenericAPIView):
 
             if not user:
                 return Response(
-                    {"message": UserConstants.NOT_FOUND},
+                    { GeneralConstants.MESSAGE:UserConstants.NOT_FOUND },
                     status=status.HTTP_404_NOT_FOUND
                 )
             
@@ -279,13 +295,13 @@ class UserDemo(generics.GenericAPIView):
                 is_user_demo = True
 
             return Response(
-                {"data" : is_user_demo}, 
+                { GeneralConstants.DATA:is_user_demo}, 
                 status=status.HTTP_200_OK
             )
 
         except Exception as e:
             return Response(
-                {"Message":"Error In Log In"}, 
+                { GeneralConstants.ERROR:LogInConstants.ERROR_IN_LOGIN }, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         
