@@ -19,11 +19,25 @@ class GeneralConstants():
     TOKEN = "Token"
     IMAGE_URL = "image_url"
     DATA = "Data"
+    SUCCESS = "Success"
+    SUCCESS_LOG_OUT = "Success Log Out"
+    ERROR_IN_SIGNUP = "Error In Sign Up"
+    ERROR_IN_LOG_OUT = "Error In Log Out"
+    ERROR_IN_UPLOAD_IMAGE = "Error In Upload Image"
 
 class LogInConstants():
     ERROR_IN_LOGIN = "Error In Log In"
 
 class ProductConstants():
     PRODUCT_DETAIL = "product_detail"
+    CAN_NOT_SAVE = "Can Not Save Product"
+    PRODUCT_NOT_FOUND = "Product Not Found"
+    ERROR_IN_PRODUCT_SEARCH = "Error In Product Search"
+
+class CartConstants():
+    CART_PRODUCT = "cart_products"
+    PRODUCT_CART_NOT_FOUND = "Product Cart Not Found"
+    ERROR_IN_CART = "Error In Cart"
+
 
 
