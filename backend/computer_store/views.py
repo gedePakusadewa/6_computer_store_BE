@@ -1,6 +1,6 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .serializers import UserSerializer, ProductSerializer, CartSerializer, CartDetailSerializer, ProductSearchSerializer
+from .serializers import UserSerializer, ProductSerializer, CartSerializer, CartDetailSerializer, ProductSearchSerializer, PurchasingSerializer, PurchasingDetailSerializer
 from rest_framework import status, generics
 from django.contrib.auth.models import User
 from rest_framework.authtoken.models import Token
@@ -15,11 +15,13 @@ from django.conf import settings
 import requests
 from django.http import JsonResponse
 
-from .models import ProductModel, CartModel
+from .models import ProductModel, CartModel, PurchasingModel, PurchasingDetailModel
 
 from django.db import connection
 
-from computer_store.constants.general import UserDemoConstants, UserConstants, GeneralConstants, ProfileConstants, LogInConstants, ProductConstants, CartConstants
+from computer_store.constants.general import UserDemoConstants, UserConstants, GeneralConstants, ProfileConstants, LogInConstants, ProductConstants, CartConstants, PaymentConstants
+
+import datetime
 
 class LogIn(generics.GenericAPIView):
     serializer_class = UserSerializer
@@ -454,6 +456,114 @@ class DB_helper():
             row = cursor.fetchall()
 
         return row
+
+class Payment(generics.GenericAPIView):
+    queryset = PurchasingModel.objects.all()
+    serializer_class = PurchasingSerializer
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+    db_helper = DB_helper()
+
+    def post(self, request):
+        try:
+            user_id = Token.objects.get(key=request.auth.key).user_id
+            user = User.objects.get(pk=user_id)
+
+            if not user:
+                return Response(
+                    { GeneralConstants.MESSAGE:UserConstants.NOT_FOUND },
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            carts = self.convert_tuple_to_dict(self.db_helper.store_procedure("cart_get_all_by_user_id("+str(user_id)+")"))
+
+            if len(carts) == 0:
+                return Response(
+                        { GeneralConstants.MESSAGE:CartConstants.PRODUCT_CART_NOT_FOUND },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            
+            purchasing_detail = self.carts_to_purchasing_detail(carts)            
+            purchasing_detail_serializer = PurchasingDetailSerializer(data=purchasing_detail, many=True)
+            if  purchasing_detail_serializer.is_valid():
+                purchasing_detail_serializer.save()
+
+                purchasing = self.purchasing_detail_to_purchasing(purchasing_detail_serializer.data, user)
+                purchasing_serializer = PurchasingSerializer(data=purchasing, many=True)
+                if  purchasing_serializer.is_valid():
+                    purchasing_serializer.save()
+                    print(user_id)
+                    self.db_helper.store_procedure("cart_delete_by_user_id("+str(user_id)+")")
+
+                    return Response(status=status.HTTP_200_OK)
+
+                else:
+                    return Response(
+                            { GeneralConstants.MESSAGE:purchasing_serializer.errors },
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+                
+            else:
+                return Response(
+                        { GeneralConstants.MESSAGE:purchasing_detail_serializer.errors },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+            # return Response(status=status.HTTP_200_OK)
+
+        except Exception as e:
+            print(e)
+            return Response(
+                { GeneralConstants.ERROR:PaymentConstants.ERROR_IN_PAYMENT }, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def convert_tuple_to_dict(self, tuple_data):
+        temp_dict = {}
+        temp_tuple = []
+        for item in tuple_data:
+            temp_dict["id"] = item[0]
+            temp_dict["name"] = item[1]
+            temp_dict["image_url"] = item[2]
+            temp_dict["price"] = item[3]
+            temp_dict["total_order"] = item[4]
+
+            temp_tuple.append(temp_dict)
+            temp_dict = {}
+
+        return temp_tuple
+
+    def carts_to_purchasing_detail(self, carts):
+        temp_dict = {}
+        temp_tuple = []
+        current_datetime = datetime.date.today().strftime ("%Y-%m-%d")
+        for item in carts:
+            temp_dict["product"] = item["id"]
+            temp_dict["quantity"] = item["total_order"]
+            temp_dict["price"] = item["price"]
+            temp_dict["total_price"] = int(item["total_order"]) * int(item["price"])
+            temp_dict["created_date"] = current_datetime
+            temp_dict["modified_date"] = current_datetime
+
+            temp_tuple.append(temp_dict)
+            temp_dict = {}
+
+        return temp_tuple
+    
+    def purchasing_detail_to_purchasing(self, purchasing_detail, user):
+        temp_dict = {}
+        temp_tuple = []
+        current_datetime = datetime.date.today().strftime ("%Y-%m-%d")
+        for item in purchasing_detail:
+            temp_dict["user"] = user.id
+            temp_dict["purchasing_detail"] = item["id"]
+            temp_dict["created_date"] = current_datetime
+            temp_dict["modified_date"] = current_datetime
+
+            temp_tuple.append(temp_dict)
+            temp_dict = {}
+
+        return temp_tuple
     
 
 

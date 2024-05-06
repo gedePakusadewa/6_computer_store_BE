@@ -1,12 +1,11 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
+from .models import ProductModel, CartModel, PurchasingModel, PurchasingDetailModel
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta(object):
         model = User
         fields = ['id', 'username', 'email']
-
-from .models import ProductModel, CartModel
 
 class ProductSerializer(serializers.ModelSerializer):
     class Meta:
@@ -42,4 +41,14 @@ class ProductSearchSerializer(serializers.Serializer):
     def get_image_url(self, obj):
         storage_location = '/media'
         return f'{storage_location}/{obj["image_url"]}'
+    
+class PurchasingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PurchasingModel
+        fields = "__all__"
+
+class PurchasingDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PurchasingDetailModel
+        fields = "__all__"
 

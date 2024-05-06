@@ -39,5 +39,9 @@ class CartConstants():
     PRODUCT_CART_NOT_FOUND = "Product Cart Not Found"
     ERROR_IN_CART = "Error In Cart"
 
+class PaymentConstants():
+    ERROR_IN_PAYMENT = "Error In Payment"
+
+
 
 
