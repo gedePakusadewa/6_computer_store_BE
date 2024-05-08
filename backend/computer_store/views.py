@@ -1,6 +1,6 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .serializers import UserSerializer, ProductSerializer, CartSerializer, CartDetailSerializer, ProductSearchSerializer, PurchasingSerializer, PurchasingDetailSerializer
+from .serializers import UserSerializer, ProductSerializer, CartSerializer, CartDetailSerializer, ProductSearchSerializer, PurchasingSerializer, PurchasingDetailSerializer, PurchasedSerializer
 from rest_framework import status, generics
 from django.contrib.auth.models import User
 from rest_framework.authtoken.models import Token
@@ -492,7 +492,7 @@ class Payment(generics.GenericAPIView):
                 purchasing_serializer = PurchasingSerializer(data=purchasing, many=True)
                 if  purchasing_serializer.is_valid():
                     purchasing_serializer.save()
-                    print(user_id)
+                    
                     self.db_helper.store_procedure("cart_delete_by_user_id("+str(user_id)+")")
 
                     return Response(status=status.HTTP_200_OK)
@@ -509,10 +509,7 @@ class Payment(generics.GenericAPIView):
                         status=status.HTTP_400_BAD_REQUEST
                     )
 
-            # return Response(status=status.HTTP_200_OK)
-
         except Exception as e:
-            print(e)
             return Response(
                 { GeneralConstants.ERROR:PaymentConstants.ERROR_IN_PAYMENT }, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -565,6 +562,67 @@ class Payment(generics.GenericAPIView):
 
         return temp_tuple
     
+class Purchased(generics.GenericAPIView):
+    queryset = PurchasingModel.objects.all()
+    serializer_class = PurchasingSerializer
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+    db_helper = DB_helper()
+
+    def get(self, request):
+        try:
+            user_id = Token.objects.get(key=request.auth.key).user_id
+            user = User.objects.get(pk=user_id)            
+            if not user:
+                return Response(
+                    { GeneralConstants.MESSAGE:UserConstants.NOT_FOUND },
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            purchased_data = self.db_helper.store_procedure("purchasing_get_all_by_user_id("+str(user_id)+")")
+            if len(purchased_data) == 0:
+                return Response(
+                    { GeneralConstants.DATA:[] },
+                    status=status.HTTP_200_OK
+                )
+
+            purchased_serializer_ready = self.purchased_data_to_serializer_format(purchased_data)
+
+            purchaser_serializered = PurchasedSerializer(purchased_serializer_ready, many=True)
+
+            return Response(
+                { GeneralConstants.DATA:purchaser_serializered.data },
+                status=status.HTTP_200_OK
+            )
+        
+        except Exception as e:
+            return Response(
+                { GeneralConstants.ERROR:GeneralConstants.ERROR_IN_PURCHASED }, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+    def purchased_data_to_serializer_format(self, data):
+        temp_dict = {}
+        temp_list = []
+
+        for x in data:
+            temp_dict["name"] = x[2]
+            temp_dict["image_url"] = x[1]
+            temp_dict["price"] = x[3]
+            temp_dict["created_date"] = x[0]
+            temp_dict["total_price"] = x[5] 
+            temp_dict["total_unit"] = x[4]
+
+            temp_list.append(temp_dict)
+            temp_dict = {}
+
+        return temp_list
+
+
+        
+
+
+
 
 
 

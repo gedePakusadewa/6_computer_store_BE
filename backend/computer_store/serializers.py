@@ -52,3 +52,14 @@ class PurchasingDetailSerializer(serializers.ModelSerializer):
         model = PurchasingDetailModel
         fields = "__all__"
 
+class PurchasedSerializer(serializers.Serializer):
+    name = serializers.StringRelatedField()
+    image_url = serializers.SerializerMethodField()
+    price = serializers.IntegerField()
+    created_date = serializers.DateField()
+    total_price = serializers.IntegerField()
+    total_unit = serializers.IntegerField()
+
+    def get_image_url(self, obj):
+        storage_location = '/media'
+        return f'{storage_location}/{obj["image_url"]}'

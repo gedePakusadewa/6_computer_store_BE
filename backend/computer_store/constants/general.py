@@ -24,6 +24,7 @@ class GeneralConstants():
     ERROR_IN_SIGNUP = "Error In Sign Up"
     ERROR_IN_LOG_OUT = "Error In Log Out"
     ERROR_IN_UPLOAD_IMAGE = "Error In Upload Image"
+    ERROR_IN_PURCHASED = "Error In Purchased"
 
 class LogInConstants():
     ERROR_IN_LOGIN = "Error In Log In"
