@@ -19,7 +19,7 @@ from .models import ProductModel, CartModel, PurchasingModel, PurchasingDetailMo
 
 from django.db import connection
 
-from computer_store.constants.general import UserDemoConstants, UserConstants, GeneralConstants, ProfileConstants, LogInConstants, ProductConstants, CartConstants, PaymentConstants
+from computer_store.constants.general import UserDemoConstants, UserConstants, GeneralConstants, ProfileConstants, LogInConstants, ProductConstants, CartConstants, PaymentConstants, DemoUserConstants
 
 import datetime
 
@@ -618,7 +618,42 @@ class Purchased(generics.GenericAPIView):
 
         return temp_list
 
+class DemoUserData(generics.GenericAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+    demo_username = getattr(settings, UserDemoConstants.USERNAME_DEMO, None)
+    db_helper = DB_helper()
 
+    def delete(self, request):
+        try:
+            user_id = Token.objects.get(key=request.auth.key).user_id
+            user = User.objects.get(pk=user_id)            
+            if not user:
+                return Response(
+                    { GeneralConstants.MESSAGE:UserConstants.NOT_FOUND },
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            if user.username != self.demo_username:
+                return Response(
+                    { GeneralConstants.MESSAGE:DemoUserConstants.NOT_DEMO_USER },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+   
+            self.db_helper.store_procedure("demo_user_delete_all_data('" + user.username + "')")
+
+            return Response(status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response(
+                { GeneralConstants.ERROR:DemoUserConstants.ERROR_IN_DEMOUSER }, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def post(self, request):
+        pass
         
 
 

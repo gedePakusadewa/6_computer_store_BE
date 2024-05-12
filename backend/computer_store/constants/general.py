@@ -26,6 +26,7 @@ class GeneralConstants():
     ERROR_IN_UPLOAD_IMAGE = "Error In Upload Image"
     ERROR_IN_PURCHASED = "Error In Purchased"
 
+
 class LogInConstants():
     ERROR_IN_LOGIN = "Error In Log In"
 
@@ -42,6 +43,10 @@ class CartConstants():
 
 class PaymentConstants():
     ERROR_IN_PAYMENT = "Error In Payment"
+
+class DemoUserConstants():
+    ERROR_IN_DEMOUSER = "Error In Demouser"
+    NOT_DEMO_USER = "This Account Is Not Demo User"
 
 
 
