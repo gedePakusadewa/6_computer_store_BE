@@ -654,7 +654,62 @@ class DemoUserData(generics.GenericAPIView):
 
     def post(self, request):
         pass
+
+class CartProducts(generics.GenericAPIView):
+    queryset = CartModel.objects.all()
+    serializer_class = CartSerializer
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+    demo_username = getattr(settings, UserDemoConstants.USERNAME_DEMO, None)
+    db_helper = DB_helper()
+
+    # limit for total order by user
+    lower_limit = 0
+    upper_limit = 100
+
+    def post(self, request):
+        try:
+            user_id = Token.objects.get(key=request.auth.key).user_id
+            user = User.objects.get(pk=user_id)            
+            if not user:
+                return Response(
+                    { GeneralConstants.MESSAGE:UserConstants.NOT_FOUND },
+                    status=status.HTTP_404_NOT_FOUND
+                )        
+
+            cart_product = CartModel.objects.get(pk=request.data["cart_product_id"])
+            if not cart_product:
+                return Response(
+                    { GeneralConstants.MESSAGE:CartConstants.CART_PRODUCT_NOT_FOUND },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            total_order = request.data["total_order"]
+            if not total_order.isdigit():
+                return Response(
+                    { GeneralConstants.MESSAGE:CartConstants.CART_PRODUCT_TOTAL_UNIT_ERROR },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            if int(total_order) < self.lower_limit or int(total_order) > self.upper_limit:
+                return Response(
+                    { GeneralConstants.MESSAGE:CartConstants.CART_PRODUCT_TOTAL_UNIT_ERROR },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            self.db_helper.store_procedure("cart_product_update_by_id('" + cart_product.id.hex + "', '" + str(total_order) + "')")
+
+            return Response(status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response(
+                { GeneralConstants.ERROR:CartConstants.ERROR_IN_CART }, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
         
+
+
+
 
 
 

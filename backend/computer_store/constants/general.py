@@ -40,6 +40,8 @@ class CartConstants():
     CART_PRODUCT = "cart_products"
     PRODUCT_CART_NOT_FOUND = "Product Cart Not Found"
     ERROR_IN_CART = "Error In Cart"
+    CART_PRODUCT_NOT_FOUND = "Cart Product Not Found"
+    CART_PRODUCT_TOTAL_UNIT_ERROR = "Invalid Total Unit"
 
 class PaymentConstants():
     ERROR_IN_PAYMENT = "Error In Payment"
