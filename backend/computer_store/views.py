@@ -23,6 +23,8 @@ from computer_store.constants.general import UserDemoConstants, UserConstants, G
 
 import datetime
 
+from computer_store.helper import UserHelper
+
 class LogIn(generics.GenericAPIView):
     serializer_class = UserSerializer
     queryset = User.objects.all()
@@ -662,6 +664,7 @@ class CartProducts(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     demo_username = getattr(settings, UserDemoConstants.USERNAME_DEMO, None)
     db_helper = DB_helper()
+    user_helper = UserHelper.UserHelper()
 
     # limit for total order by user
     lower_limit = 0
@@ -669,15 +672,11 @@ class CartProducts(generics.GenericAPIView):
 
     def post(self, request):
         try:
-            user_id = Token.objects.get(key=request.auth.key).user_id
-            user = User.objects.get(pk=user_id)            
-            if not user:
-                return Response(
-                    { GeneralConstants.MESSAGE:UserConstants.NOT_FOUND },
-                    status=status.HTTP_404_NOT_FOUND
-                )        
-
-            cart_product = CartModel.objects.get(pk=request.data["cart_product_id"])
+            user = self.user_helper.get_user_by_token_or_404(request.auth.key)
+            if user.is_error:
+                return user.error_message
+               
+            cart_product = self.get_cart_product(request.data["cart_product_id"])            
             if not cart_product:
                 return Response(
                     { GeneralConstants.MESSAGE:CartConstants.CART_PRODUCT_NOT_FOUND },
@@ -706,10 +705,12 @@ class CartProducts(generics.GenericAPIView):
                 { GeneralConstants.ERROR:CartConstants.ERROR_IN_CART }, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-        
 
-
-
+    def get_cart_product(self, id):
+        try:
+            return CartModel.objects.get(pk=id)
+        except CartModel.DoesNotExist:
+            return None
 
 
 
