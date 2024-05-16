@@ -399,22 +399,13 @@ class Cart(generics.GenericAPIView):
     
     def delete(self, request):
         try:
-            user_id = Token.objects.get(key=request.auth.key).user_id
-            user = User.objects.get(pk=user_id)
-            
-            if not user:
-                return Response(
-                        { GeneralConstants.MESSAGE:UserConstants.NOT_FOUND },
-                        status=status.HTTP_404_NOT_FOUND
-                    )
+            user = self.user_helper.get_user_by_token_or_404(request.auth.key)
+            if user.is_error:
+                return user.error_message
 
-            cart = CartModel.objects.get(product_id=request.data['product_id'])
-
-            if not cart:
-                return Response(
-                    { GeneralConstants.MESSAGE:CartConstants.PRODUCT_CART_NOT_FOUND },
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+            cart = self.get_cart_or_400(request.data['cart_id'])
+            if cart.is_error:
+                return cart
             
             cart.delete()
 
@@ -426,6 +417,21 @@ class Cart(generics.GenericAPIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
+    def get_cart_or_400(self, id):
+        cart = CartModel
+        cart.is_error = False
+        
+        try:
+            cart = CartModel.objects.get(pk=id)         
+        except User.DoesNotExist:
+            cart.is_error = True
+            cart.error_message = Response(
+                { GeneralConstants.MESSAGE:CartConstants.PRODUCT_CART_NOT_FOUND },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        return cart
+
     def convert_tuple_to_dict(self, tuple_data):
         temp_dict = {}
         temp_tuple = []
