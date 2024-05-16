@@ -327,6 +327,7 @@ class Cart(generics.GenericAPIView):
     serializer_class = CartSerializer
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
+    user_helper = UserHelper.UserHelper()
 
     def post(self, request):
         try:
@@ -374,22 +375,22 @@ class Cart(generics.GenericAPIView):
     
     def get(self, request):
         try:
-            user_id = Token.objects.get(key=request.auth.key).user_id
-            user = User.objects.get(pk=user_id)
+            user = self.user_helper.get_user_by_token_or_404(request.auth.key)
+            if user.is_error:
+                return user.error_message
             
             if user:
                 db_helper = DB_helper()
-                carts = self.convert_tuple_to_dict(db_helper.store_procedure("cart_get_all_by_user_id("+str(user_id)+")"))
+                carts = self.convert_tuple_to_dict(db_helper.store_procedure("cart_get_all_by_user_id("+str(user.id)+")"))
+                total_order_price = self.get_total_order_and_price(carts)
 
                 serializer = CartDetailSerializer(instance=carts, many=True)
                 
-                return Response({ CartConstants.CART_PRODUCT:serializer.data }) 
-
-            return Response(
-                    { GeneralConstants.MESSAGE:UserConstants.NOT_FOUND },
-                    status=status.HTTP_404_NOT_FOUND
-                )
-        
+                return Response({
+                    CartConstants.CART_PRODUCT:serializer.data,   
+                    CartConstants.TOTAL_ORDER_PRICE:total_order_price
+                }) 
+            
         except Exception as e:
             return Response(
                 { GeneralConstants.ERROR:CartConstants.ERROR_IN_CART }, 
@@ -440,6 +441,17 @@ class Cart(generics.GenericAPIView):
             temp_dict = {}
 
         return temp_tuple
+    
+    def get_total_order_and_price(self, cart_data):
+        total_order = 0
+        total_price = 0
+
+        for item in cart_data:
+            total_order += int(item["total_order"])
+
+        total_price = total_order * int(item["price"])
+
+        return {"total_order":total_order,  "total_price":total_price}
 
 #TODO:
     #find a new structure to place db helper
