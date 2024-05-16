@@ -380,7 +380,7 @@ class Cart(generics.GenericAPIView):
             if user:
                 db_helper = DB_helper()
                 carts = self.convert_tuple_to_dict(db_helper.store_procedure("cart_get_all_by_user_id("+str(user_id)+")"))
-                
+
                 serializer = CartDetailSerializer(instance=carts, many=True)
                 
                 return Response({ CartConstants.CART_PRODUCT:serializer.data }) 
@@ -429,11 +429,12 @@ class Cart(generics.GenericAPIView):
         temp_dict = {}
         temp_tuple = []
         for item in tuple_data:
-            temp_dict["id"] = item[0]
+            temp_dict["id_product"] = item[0]
             temp_dict["name"] = item[1]
             temp_dict["image_url"] = item[2]
             temp_dict["price"] = item[3]
             temp_dict["total_order"] = item[4]
+            temp_dict["id_cart"] = item[5]
 
             temp_tuple.append(temp_dict)
             temp_dict = {}

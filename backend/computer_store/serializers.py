@@ -18,11 +18,12 @@ class CartSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class CartDetailSerializer(serializers.Serializer):
-    id = serializers.StringRelatedField()
+    id_product = serializers.StringRelatedField()
     name = serializers.StringRelatedField()
     image_url = serializers.SerializerMethodField()
     price = serializers.IntegerField()
     total_order = serializers.IntegerField()
+    id_cart = serializers.StringRelatedField()
 
     def get_image_url(self, obj):
         storage_location = '/media'
