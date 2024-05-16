@@ -144,3 +144,5 @@ MEDIA_URL = '/media/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 USERNAME_DEMO = "demo_user1"
+ADMIN = "admin_kita"
+ADMIN_DEMO = "demo_admin1"
