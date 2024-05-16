@@ -23,7 +23,7 @@ from computer_store.constants.general import UserDemoConstants, UserConstants, G
 
 import datetime
 
-from computer_store.helper import UserHelper
+from computer_store.helper import UserHelper, AdminHelper
 
 class LogIn(generics.GenericAPIView):
     serializer_class = UserSerializer
@@ -731,8 +731,20 @@ class CartProducts(generics.GenericAPIView):
         except CartModel.DoesNotExist:
             return None
 
+class AdminProducts(generics.GenericAPIView):
+    queryset = ProductModel.objects.all()
+    serializer_class = ProductSerializer
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+    admin_helper = AdminHelper.AdminHelper()
 
+    def get(self, request):
+        user = self.admin_helper.get_admin_or_400(request.auth.key)
+        if user.is_error:
+            return user.error_message
+        
+        serializer = self.serializer_class(self.queryset.all(), many=True)
 
-
+        return Response(serializer.data)
 
 

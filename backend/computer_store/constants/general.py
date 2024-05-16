@@ -51,6 +51,9 @@ class DemoUserConstants():
     ERROR_IN_DEMOUSER = "Error In Demouser"
     NOT_DEMO_USER = "This Account Is Not Demo User"
 
+class AdminConstants():
+    INVALID_ADMIN = "Account Is Not Admin"
+
 
 
 
