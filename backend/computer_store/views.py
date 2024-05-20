@@ -747,4 +747,57 @@ class AdminProducts(generics.GenericAPIView):
 
         return Response(serializer.data)
 
+class AdminProductsSearch(generics.GenericAPIView):
+    queryset = ProductModel.objects.all()
+    serializer_class = ProductSerializer
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+    admin_helper = AdminHelper.AdminHelper()
+    db_helper = DB_helper()
 
+    def get(self, request):
+        user = self.admin_helper.get_admin_or_400(request.auth.key)
+        if user.is_error:
+            return user.error_message
+        
+        products = self.convert_to_product_search_serializer(
+            self.db_helper.store_procedure(
+                "product_get_product_by_search('" + request.GET.get('keywords') + "')"))
+
+        serializer = ProductSearchSerializer(products, many=True)
+
+        return Response(serializer.data)
+
+    def convert_to_product_search_serializer(self, list_data):
+        temp_dict = {}
+        temp_tuple = []
+        for item in list_data:
+            temp_dict["id"] = item[0]
+            temp_dict["name"] = item[1]
+            temp_dict["image_url"] = item[2]
+            temp_dict["price"] = item[3]
+            temp_dict["created_by"] = item[4]
+            temp_dict["created_date"] = item[5]
+            temp_dict["modified_date"] = item[6]
+            temp_dict["star_review"] = item[7]
+
+            temp_tuple.append(temp_dict)
+            temp_dict = {}
+
+        return temp_tuple
+    
+class AdminUsers(generics.GenericAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+    admin_helper = AdminHelper.AdminHelper()
+
+    def get(self, request):
+        user = self.admin_helper.get_admin_or_400(request.auth.key)
+        if user.is_error:
+            return user.error_message
+        
+        serializer = self.serializer_class(self.queryset.all(), many=True)
+
+        return Response(serializer.data)
