@@ -24,7 +24,7 @@ from computer_store.helper import AdminHelper, DBHelper
 from datetime import date
 
 class AdminProducts(generics.GenericAPIView):
-    queryset = ProductModel.objects.all()
+    queryset = ProductModel.objects.filter(is_delete=0)
     serializer_class = ProductSerializer
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
@@ -56,7 +56,8 @@ class AdminProducts(generics.GenericAPIView):
                 'created_by' : 'admin',
                 'created_date' : date.today(),
                 'modified_date' : date.today(),
-                'description' : request.data['description']
+                'description' : request.data['description'],
+                'quantity' : request.data['quantity']
             }
 
             serializer = ProductSerializer(data=request_data)

@@ -18,6 +18,7 @@ class ProductModel(models.Model):
     star_review = models.IntegerField(default=0)
     is_delete = models.BooleanField(default=False)
     description = models.TextField(default='')
+    quantity = models.IntegerField(default=0)
 
     class Meta:
         def __str__(self) -> str:
