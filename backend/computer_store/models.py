@@ -16,6 +16,8 @@ class ProductModel(models.Model):
     created_date = models.DateField()
     modified_date = models.DateField()
     star_review = models.IntegerField(default=0)
+    is_delete = models.BooleanField(default=False)
+    description = models.TextField(default='')
 
     class Meta:
         def __str__(self) -> str:

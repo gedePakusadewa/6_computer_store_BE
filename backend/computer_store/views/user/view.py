@@ -1,6 +1,6 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .serializers import UserSerializer, ProductSerializer, CartSerializer, CartDetailSerializer, ProductSearchSerializer, PurchasingSerializer, PurchasingDetailSerializer, PurchasedSerializer
+from computer_store.serializers import UserSerializer, ProductSerializer, CartSerializer, CartDetailSerializer, ProductSearchSerializer, PurchasingSerializer, PurchasingDetailSerializer, PurchasedSerializer
 from rest_framework import status, generics
 from django.contrib.auth.models import User
 from rest_framework.authtoken.models import Token
@@ -15,15 +15,15 @@ from django.conf import settings
 import requests
 from django.http import JsonResponse
 
-from .models import ProductModel, CartModel, PurchasingModel, PurchasingDetailModel
+from computer_store.models import ProductModel, CartModel, PurchasingModel, PurchasingDetailModel
 
 from django.db import connection
 
-from computer_store.constants.general import UserDemoConstants, UserConstants, GeneralConstants, ProfileConstants, LogInConstants, ProductConstants, CartConstants, PaymentConstants, DemoUserConstants
+from computer_store.constants.general import UserDemoConstants, UserConstants, GeneralConstants, ProfileConstants, LogInConstants, ProductConstants, CartConstants, PaymentConstants, DemoUserConstants, AdminConstants
 
 import datetime
 
-from computer_store.helper import UserHelper, AdminHelper
+from computer_store.helper import UserHelper, AdminHelper, DBHelper
 
 class LogIn(generics.GenericAPIView):
     serializer_class = UserSerializer
@@ -112,38 +112,18 @@ class LogOut(generics.GenericAPIView):
                 { GeneralConstants.ERROR:GeneralConstants.ERROR_IN_LOG_OUT },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
-class ProductImage(generics.GenericAPIView):
+        
+class Products(generics.GenericAPIView):
     queryset = ProductModel.objects.all()
     serializer_class = ProductSerializer
-    # parser_classes = (MultiPartParser, FormParser)
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
-
-    #http://localhost:8000/media/images/Screenshot_2023-11-23_073706.png
-    
-    def post(self, request):
-        try:
-            serializer = ProductSerializer(data=request.data)
-
-            if serializer.is_valid():
-                serializer.save()
-
-                return Response({ GeneralConstants.IMAGE_URL:serializer.data })
-            
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
-        except Exception as e:
-            return Response(
-                { GeneralConstants.ERROR:GeneralConstants.ERROR_IN_UPLOAD_IMAGE },
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
     
     def get(self, request):
         serializer = self.serializer_class(self.queryset.all(), many=True)
 
         return Response(serializer.data)
-    
+
 class ProductSearch(generics.GenericAPIView):
     queryset = ProductModel.objects.all()
     serializer_class = ProductSerializer
@@ -156,7 +136,7 @@ class ProductSearch(generics.GenericAPIView):
         try:
             keywords = request.GET.get("keywords")
 
-            db_helper = DB_helper()
+            db_helper = DBHelper.DB_helper()
             products = self.convert_tuple_to_dict(db_helper.store_procedure("product_get_product_by_search('" + keywords + "')"))
         
             serializer = ProductSearchSerializer(products, many=True)
@@ -279,7 +259,7 @@ class Profile(generics.GenericAPIView):
             # track sql query using
             # print(connection.queries)       
             user.delete()
-            db_helper = DB_helper()
+            db_helper = DBHelper.DB_helper()
             carts = db_helper.store_procedure("profile_delete_user_by_user_id("+str(user_id)+")")
 
             return Response(
@@ -380,7 +360,7 @@ class Cart(generics.GenericAPIView):
                 return user.error_message
             
             if user:
-                db_helper = DB_helper()
+                db_helper = DBHelper.DB_helper()
                 carts = self.convert_tuple_to_dict(db_helper.store_procedure("cart_get_all_by_user_id("+str(user.id)+")"))
                 total_order_price = self.get_total_order_and_price(carts)
 
@@ -459,31 +439,12 @@ class Cart(generics.GenericAPIView):
 
         return {"total_order":total_order,  "total_price":total_price}
 
-#TODO:
-    #find a new structure to place db helper
-    #search what is connection, connection.cursor, cursor.execute, cursor.fetahcall()
-    #is there alternative to this?
-class DB_helper():
-    def function_get_all(self, function_name):
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT * FROM "+ function_name +";")
-            row = cursor.fetchall()
-
-        return row
-    
-    def store_procedure(self, sp_name):
-        with connection.cursor() as cursor:
-            cursor.execute("CALL "+ sp_name +";")
-            row = cursor.fetchall()
-
-        return row
-
 class Payment(generics.GenericAPIView):
     queryset = PurchasingModel.objects.all()
     serializer_class = PurchasingSerializer
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
-    db_helper = DB_helper()
+    db_helper = DBHelper.DB_helper()
 
     def post(self, request):
         try:
@@ -588,7 +549,7 @@ class Purchased(generics.GenericAPIView):
     serializer_class = PurchasingSerializer
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
-    db_helper = DB_helper()
+    db_helper = DBHelper.DB_helper()
 
     def get(self, request):
         try:
@@ -645,7 +606,7 @@ class DemoUserData(generics.GenericAPIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
     demo_username = getattr(settings, UserDemoConstants.USERNAME_DEMO, None)
-    db_helper = DB_helper()
+    db_helper = DBHelper.DB_helper()
 
     def delete(self, request):
         try:
@@ -682,7 +643,7 @@ class CartProducts(generics.GenericAPIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
     demo_username = getattr(settings, UserDemoConstants.USERNAME_DEMO, None)
-    db_helper = DB_helper()
+    db_helper = DBHelper.DB_helper()
     user_helper = UserHelper.UserHelper()
 
     # limit for total order by user
@@ -731,73 +692,171 @@ class CartProducts(generics.GenericAPIView):
         except CartModel.DoesNotExist:
             return None
 
-class AdminProducts(generics.GenericAPIView):
-    queryset = ProductModel.objects.all()
-    serializer_class = ProductSerializer
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]
-    admin_helper = AdminHelper.AdminHelper()
+# class AdminProducts(generics.GenericAPIView):
+#     queryset = ProductModel.objects.all()
+#     serializer_class = ProductSerializer
+#     authentication_classes = [TokenAuthentication]
+#     permission_classes = [IsAuthenticated]
+#     admin_helper = AdminHelper.AdminHelper()
 
-    def get(self, request):
-        user = self.admin_helper.get_admin_or_400(request.auth.key)
-        if user.is_error:
-            return user.error_message
+#     def get(self, request):
+#         user = self.admin_helper.get_admin_or_400(request.auth.key)
+#         if user.is_error:
+#             return user.error_message
         
-        serializer = self.serializer_class(self.queryset.all(), many=True)
+#         serializer = self.serializer_class(self.queryset.all(), many=True)
 
-        return Response(serializer.data)
-
-class AdminProductsSearch(generics.GenericAPIView):
-    queryset = ProductModel.objects.all()
-    serializer_class = ProductSerializer
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]
-    admin_helper = AdminHelper.AdminHelper()
-    db_helper = DB_helper()
-
-    def get(self, request):
-        user = self.admin_helper.get_admin_or_400(request.auth.key)
-        if user.is_error:
-            return user.error_message
-        
-        products = self.convert_to_product_search_serializer(
-            self.db_helper.store_procedure(
-                "product_get_product_by_search('" + request.GET.get('keywords') + "')"))
-
-        serializer = ProductSearchSerializer(products, many=True)
-
-        return Response(serializer.data)
-
-    def convert_to_product_search_serializer(self, list_data):
-        temp_dict = {}
-        temp_tuple = []
-        for item in list_data:
-            temp_dict["id"] = item[0]
-            temp_dict["name"] = item[1]
-            temp_dict["image_url"] = item[2]
-            temp_dict["price"] = item[3]
-            temp_dict["created_by"] = item[4]
-            temp_dict["created_date"] = item[5]
-            temp_dict["modified_date"] = item[6]
-            temp_dict["star_review"] = item[7]
-
-            temp_tuple.append(temp_dict)
-            temp_dict = {}
-
-        return temp_tuple
+#         return Response(serializer.data)
     
-class AdminUsers(generics.GenericAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]
-    admin_helper = AdminHelper.AdminHelper()
+#     # def post(self, request):
+#     #     try:
+#     #         user = self.admin_helper.get_admin_or_400(request.auth.key)
+#     #         if user.is_error:
+#     #             return user.error_message
 
-    def get(self, request):
-        user = self.admin_helper.get_admin_or_400(request.auth.key)
-        if user.is_error:
-            return user.error_message
+#     #         serializer = ProductSerializer(data=request.data)
+
+#     #         if serializer.is_valid():
+#     #             serializer.save()
+
+#     #             return Response(status=status.HTTP_200_OK)
+            
+#     #         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
-        serializer = self.serializer_class(self.queryset.all(), many=True)
+#     #     except Exception as e:
+#     #         return Response(
+#     #             { GeneralConstants.ERROR:GeneralConstants.ERROR_IN_UPLOAD_IMAGE },
+#     #             status=status.HTTP_500_INTERNAL_SERVER_ERROR
+#     #         )
+        
+#     def delete(self, request):
+#         user = self.admin_helper.get_admin_or_400(request.auth.key)
+#         if user.is_error:
+#             return user.error_message
+        
+#         product = self.get_product
+#         if not product:
+#             return Response(
+#                 { GeneralConstants.MESSAGE:ProductConstants.PRODUCT_NOT_FOUND },
+#                 status=status.HTTP_400_BAD_REQUEST
+#             )
+        
+#         product.is_delete = True
 
-        return Response(serializer.data)
+#         product_serializer = self.serializer_class(instance=product)
+
+#         if product_serializer.is_valid():
+#             product_serializer.save()
+            
+#             return Response(status=status.HTTP_200_OK)
+
+#         return Response(
+#             { GeneralConstants.MESSAGE:ProductConstants.CAN_NOT_DELETE },
+#             status=status.HTTP_400_BAD_REQUEST
+#         )
+
+#     def get_product(self, pk):
+#         try:
+#             return ProductModel.objects.get(pk=pk)
+#         except ProductModel.DoesNotExist:
+#             return None    
+
+
+# class AdminProductsSearch(generics.GenericAPIView):
+#     queryset = ProductModel.objects.all()
+#     serializer_class = ProductSerializer
+#     authentication_classes = [TokenAuthentication]
+#     permission_classes = [IsAuthenticated]
+#     admin_helper = AdminHelper.AdminHelper()
+#     db_helper = DB_helper()
+
+#     def get(self, request):
+#         try:
+#             user = self.admin_helper.get_admin_or_400(request.auth.key)
+#             if user.is_error:
+#                 return user.error_message
+            
+#             products = self.convert_to_product_search_serializer(
+#                 self.db_helper.store_procedure(
+#                     "product_get_product_by_search('" + request.GET.get('keywords') + "')"))
+
+#             serializer = ProductSearchSerializer(products, many=True)
+
+#             return Response(serializer.data)
+        
+#         except Exception as e:
+#             return Response(
+#                 { GeneralConstants.ERROR:AdminConstants.ERROR_PRODUCT_SEARCH }, 
+#                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
+#             )
+
+#     def convert_to_product_search_serializer(self, list_data):
+#         temp_dict = {}
+#         temp_tuple = []
+#         for item in list_data:
+#             temp_dict["id"] = item[0]
+#             temp_dict["name"] = item[1]
+#             temp_dict["image_url"] = item[2]
+#             temp_dict["price"] = item[3]
+#             temp_dict["created_by"] = item[4]
+#             temp_dict["created_date"] = item[5]
+#             temp_dict["modified_date"] = item[6]
+#             temp_dict["star_review"] = item[7]
+
+#             temp_tuple.append(temp_dict)
+#             temp_dict = {}
+
+#         return temp_tuple
+
+# class AdminProductsUpload(generics.GenericAPIView):
+#     queryset = ProductModel.objects.all()
+#     serializer_class = ProductSerializer
+#     # parser_classes = (MultiPartParser, FormParser)
+#     authentication_classes = [TokenAuthentication]
+#     permission_classes = [IsAuthenticated]
+#     admin_helper = AdminHelper.AdminHelper()
+
+#     #http://localhost:8000/media/images/Screenshot_2023-11-23_073706.png
+    
+#     def post(self, request):
+#         try:
+#             user = self.admin_helper.get_admin_or_400(request.auth.key)
+#             if user.is_error:
+#                 return user.error_message
+
+#             serializer = ProductSerializer(data=request.data)
+
+#             if serializer.is_valid():
+#                 serializer.save()
+
+#                 return Response(status=status.HTTP_200_OK)
+            
+#             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+#         except Exception as e:
+#             return Response(
+#                 { GeneralConstants.ERROR:GeneralConstants.ERROR_IN_UPLOAD_IMAGE },
+#                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
+#             )
+    
+#     def get(self, request):
+#         serializer = self.serializer_class(self.queryset.all(), many=True)
+
+#         return Response(serializer.data)
+
+
+# class AdminUsers(generics.GenericAPIView):
+    # queryset = User.objects.all()
+    # serializer_class = UserSerializer
+    # authentication_classes = [TokenAuthentication]
+    # permission_classes = [IsAuthenticated]
+    # admin_helper = AdminHelper.AdminHelper()
+
+    # def get(self, request):
+    #     user = self.admin_helper.get_admin_or_400(request.auth.key)
+    #     if user.is_error:
+    #         return user.error_message
+        
+    #     serializer = self.serializer_class(self.queryset.all(), many=True)
+
+    #     return Response(serializer.data)

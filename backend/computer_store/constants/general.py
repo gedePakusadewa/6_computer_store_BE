@@ -26,7 +26,6 @@ class GeneralConstants():
     ERROR_IN_UPLOAD_IMAGE = "Error In Upload Image"
     ERROR_IN_PURCHASED = "Error In Purchased"
 
-
 class LogInConstants():
     ERROR_IN_LOGIN = "Error In Log In"
 
@@ -35,6 +34,7 @@ class ProductConstants():
     CAN_NOT_SAVE = "Can Not Save Product"
     PRODUCT_NOT_FOUND = "Product Not Found"
     ERROR_IN_PRODUCT_SEARCH = "Error In Product Search"
+    CAN_NOT_DELETE = "Can Not Delete Product"
 
 class CartConstants():
     CART_PRODUCT = "cart_products"
@@ -53,6 +53,7 @@ class DemoUserConstants():
 
 class AdminConstants():
     INVALID_ADMIN = "Account Is Not Admin"
+    ERROR_PRODUCT_SEARCH = "Error In Product Search"
 
 
 
